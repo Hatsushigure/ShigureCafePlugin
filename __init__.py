@@ -4,7 +4,7 @@ from ShigureCafePlugin import whitelist_sync, message_sync
 # Default Configuration
 DEFAULT_CONFIG = {
     "api_url": "http://localhost:8080/api/v1/minecraft/whitelist",
-    "chat_sync_url": "http://localhost:8080/api/v1/minecraft/message-sync",
+    "chat_sync_url": "http://localhost:8080/api/v1/minecraft/chat-sync",
     "api_key": "shigure-cafe-secret-key",
     "interval": 300,
     "chat_sync_interval": 1,
