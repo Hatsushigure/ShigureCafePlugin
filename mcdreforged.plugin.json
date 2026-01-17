@@ -2,9 +2,9 @@
   "id": "shigure_cafe_plugin",
   "version": "1.0.0",
   "name": "ShigureCafePlugin",
-  "description": "Sync whitelist from ShigureCafeBackend",
+  "description": "Sync whitelist and chat messages with ShigureCafeBackend",
   "author": "ShigureCafe",
-  "link": "https://github.com/ShigureCafe",
+  "link": "https://github.com/ShigureCafePlugin",
   "dependencies": {
     "mcdreforged": ">=2.0.0"
   },
