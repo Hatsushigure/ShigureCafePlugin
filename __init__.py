@@ -6,7 +6,7 @@ DEFAULT_CONFIG = {
     "api_url": "http://localhost:8080/api/v1/minecraft/whitelist",
     "chat_sync_url": "http://localhost:8080/api/v1/minecraft/message-sync",
     "api_key": "shigure-cafe-secret-key",
-    "interval": 60,
+    "interval": 300,
     "chat_sync_interval": 1,
     "whitelist_file": "whitelist.json"
 }
@@ -20,8 +20,27 @@ def load_config(server: PluginServerInterface):
 
 def on_load(server: PluginServerInterface, old):
     load_config(server)
+    register_commands(server)
     whitelist_sync.whitelist_loop(server, config)
     message_sync.chat_sync_loop(server, config)
+
+def register_commands(server: PluginServerInterface):
+    server.register_command(
+        Literal('!!cafe').then(
+            Literal('whitelist').then(
+                Literal('sync').runs(lambda src: manual_whitelist_sync(src))
+            )
+        )
+    )
+
+def manual_whitelist_sync(src: CommandSource):
+    server = src.get_server()
+    src.reply('§b[ShigureCafe]§r 正在手动触发白名单同步...')
+    try:
+        whitelist_sync.sync_whitelist(server, config)
+        src.reply('§b[ShigureCafe]§r 白名单同步完成！')
+    except Exception as e:
+        src.reply(f'§b[ShigureCafe]§c 白名单同步失败: {e}')
 
 def on_info(server: PluginServerInterface, info: Info):
     message_sync.on_info(server, info)
