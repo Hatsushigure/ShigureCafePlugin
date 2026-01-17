@@ -1,0 +1,12 @@
+{
+  "id": "shigure_cafe_plugin",
+  "version": "1.0.0",
+  "name": "ShigureCafePlugin",
+  "description": "Sync whitelist from ShigureCafeBackend",
+  "author": "ShigureCafe",
+  "link": "https://github.com/ShigureCafe",
+  "dependencies": {
+    "mcdreforged": ">=2.0.0"
+  },
+  "entry": "__init__.py"
+}
