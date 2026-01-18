@@ -1,0 +1,55 @@
+name: Release Plugin
+
+on:
+  push:
+    branches: [ "master", "main" ]
+    tags:
+      - "v*"
+  pull_request:
+    branches: [ "master", "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.x"
+
+    - name: Get version
+      id: get_version
+      run: |
+        VERSION=$(python -c "import json; print(json.load(open('mcdreforged.plugin.json'))['version'])")
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+        echo "Detected version: $VERSION"
+
+    - name: Create MCDR Package
+      run: |
+        # Create a zip file with .mcdr extension containing the necessary files
+        zip -r ShigureCafePlugin-${{ env.VERSION }}.mcdr \
+          mcdreforged.plugin.json \
+          __init__.py \
+          message_sync.py \
+          whitelist_sync.py \
+          requirements.txt
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ShigureCafePlugin-${{ env.VERSION }}
+        path: ShigureCafePlugin-${{ env.VERSION }}.mcdr
+
+    - name: Create Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: ShigureCafePlugin-${{ env.VERSION }}.mcdr
+        generate_release_notes: true
