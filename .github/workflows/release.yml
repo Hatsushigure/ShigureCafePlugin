@@ -36,9 +36,7 @@ jobs:
         # Create a zip file with .mcdr extension containing the necessary files
         zip -r ShigureCafePlugin-${{ env.VERSION }}.mcdr \
           mcdreforged.plugin.json \
-          __init__.py \
-          message_sync.py \
-          whitelist_sync.py \
+          shigure_cafe_plugin/ \
           requirements.txt
 
     - name: Upload Artifact
@@ -47,9 +45,7 @@ jobs:
         name: ShigureCafePlugin-${{ env.VERSION }}.mcdr
         path: |
           mcdreforged.plugin.json
-          __init__.py
-          message_sync.py
-          whitelist_sync.py
+          shigure_cafe_plugin/
           requirements.txt
 
     - name: Create Release

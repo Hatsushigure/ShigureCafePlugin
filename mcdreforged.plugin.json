@@ -8,5 +8,5 @@
   "dependencies": {
     "mcdreforged": ">=2.0.0"
   },
-  "entry": "__init__.py"
+  "entry": "shigure_cafe_plugin/__init__.py"
 }
