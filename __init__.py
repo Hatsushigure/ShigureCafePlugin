@@ -1,5 +1,5 @@
 from mcdreforged.api.all import *
-from ShigureCafePlugin import whitelist_sync, message_sync
+from . import whitelist_sync, message_sync
 
 # Default Configuration
 DEFAULT_CONFIG = {
