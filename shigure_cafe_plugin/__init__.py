@@ -1,5 +1,11 @@
+import threading
 from mcdreforged.api.all import *
 from . import whitelist_sync, message_sync
+
+# Global state
+config = {}
+chat_client = None
+stop_event = threading.Event()
 
 # Default Configuration
 DEFAULT_CONFIG = {
@@ -10,18 +16,31 @@ DEFAULT_CONFIG = {
     "whitelist_file": "whitelist.json"
 }
 
-config = DEFAULT_CONFIG
-
 def load_config(server: PluginServerInterface):
     global config
-    config = server.load_config_simple(target_class=dict, default_config=DEFAULT_CONFIG)
+    config = server.load_config_simple(default_config=DEFAULT_CONFIG, in_data_folder=True)
     server.logger.info(f'Config loaded: {config}')
 
 def on_load(server: PluginServerInterface, old):
+    global chat_client, stop_event
     load_config(server)
     register_commands(server)
-    whitelist_sync.whitelist_loop(server, config)
-    message_sync.chat_sync_loop(server, config)
+    
+    stop_event.clear()
+    whitelist_sync.whitelist_loop(server, config, stop_event)
+    chat_client = message_sync.chat_sync_loop(server, config)
+
+def on_unload(server: PluginServerInterface):
+    global chat_client, stop_event
+    server.logger.info('Unloading ShigureCafePlugin...')
+    
+    # Stop whitelist sync loop
+    stop_event.set()
+    
+    # Stop chat sync websocket client
+    if chat_client:
+        chat_client.stop()
+        chat_client = None
 
 def register_commands(server: PluginServerInterface):
     server.register_command(

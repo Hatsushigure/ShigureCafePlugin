@@ -2,9 +2,12 @@ import json
 import os
 import time
 import requests
+import threading
 from mcdreforged.api.all import *
 
 def sync_whitelist(server: PluginServerInterface, config: dict):
+# ... (same as before)
+
     url = config.get('api_url')
     whitelist_path = config.get('whitelist_file')
     
@@ -44,12 +47,12 @@ def sync_whitelist(server: PluginServerInterface, config: dict):
         server.logger.error(f'Error syncing whitelist: {e}')
 
 @new_thread('ShigureCafeWhitelistSync')
-def whitelist_loop(server: PluginServerInterface, config: dict):
-    while True:
-        if not server.is_plugin_loaded('shigure_cafe_plugin'):
-            break
+def whitelist_loop(server: PluginServerInterface, config: dict, stop_event: threading.Event):
+    while not stop_event.is_set():
         try:
             sync_whitelist(server, config)
         except Exception as e:
              server.logger.error(f"Error in whitelist loop: {e}")
-        time.sleep(config.get('interval', 60))
+        
+        # Wait for interval or until stop_event is set
+        stop_event.wait(config.get('interval', 300))

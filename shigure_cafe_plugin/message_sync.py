@@ -121,6 +121,7 @@ def chat_sync_loop(server: PluginServerInterface, config: dict):
     # Use MCDR's new_thread decorator style via manual thread creation to keep client reference if needed
     thread = threading.Thread(target=client.run, name='ShigureCafeChatSync', daemon=True)
     thread.start()
+    return client
 
 def on_info(server: PluginServerInterface, info: Info):
     if not server.is_server_startup():
