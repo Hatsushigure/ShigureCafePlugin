@@ -38,12 +38,11 @@ class WhitelistSyncClient:
         
         try:
             remote_whitelist_json = resp.json()
-            remote_whitelist_raw = remote_whitelist_json['whitelist']
             remote_whitelist: Whitelist = set(
                 PlayerInfo(
                     entry['uuid'],
                     entry['name']
-                    ) for entry in remote_whitelist_raw
+                    ) for entry in remote_whitelist_json
                 )
         except Exception as e:
             self.server.logger.error(f'Error parsing remote whitelist: {e}')
@@ -52,7 +51,10 @@ class WhitelistSyncClient:
         try:
             local_whitelist: Whitelist = set()
             with open(self.whitelist_path, 'r', encoding='utf-8') as f:
-                local_whitelist_json = json.load(f)
+                content = f.read().strip()
+                if not content:
+                    content = '[]'
+                local_whitelist_json = json.loads(content)
                 local_whitelist = set(
                     PlayerInfo(
                         entry['uuid'],
@@ -67,7 +69,7 @@ class WhitelistSyncClient:
             self.server.logger.info(f'Whitelist change detected. Updating...')
             try:
                 with open(self.whitelist_path, 'w', encoding='utf-8') as f:
-                    f.write(remote_whitelist_json)
+                    json.dump(remote_whitelist_json, f, indent=4)
             except Exception as e:
                 self.server.logger.error(f'Failed to write local whitelist: {e}')
                 return

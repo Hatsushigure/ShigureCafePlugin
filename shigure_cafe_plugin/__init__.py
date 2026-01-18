@@ -6,7 +6,7 @@ from .chat_sync import Message, ChatSyncClient
 from .whitelist_sync import WhitelistSyncClient
 
 # Global state
-config = {}
+config: dict = {}
 chat_client: ChatSyncClient | None = None
 whitelist_client: WhitelistSyncClient | None = None
 
@@ -20,14 +20,14 @@ DEFAULT_CONFIG = {
 
 def load_config(server: PluginServerInterface):
     global config
-    config: dict = server.load_config_simple(default_config=DEFAULT_CONFIG, in_data_folder=True) # type: ignore
+    config = server.load_config_simple(default_config=DEFAULT_CONFIG, in_data_folder=True) # type: ignore
     server.logger.info(f'Config loaded: {config}')
 
 def on_load(server: PluginServerInterface, old):
-    global chat_client, stop_event
     load_config(server)
     register_commands(server)
     
+    global chat_client, whitelist_client
     whitelist_client = WhitelistSyncClient(server, config)
     chat_client = ChatSyncClient(server, config)
     whitelist_client.run() # type: ignore
