@@ -3,7 +3,8 @@ import time
 import threading
 import websocket
 import dataclasses
-from mcdreforged.api.all import PluginServerInterface, new_thread
+from mcdreforged.api.decorator import new_thread
+from mcdreforged.api.types import PluginServerInterface
 
 queue_lock = threading.Lock()
 
@@ -21,8 +22,8 @@ class ChatSyncClient:
         self.config = config
         self.running = True
         self.reconnect_delay = 1
-        api_key = str(self.config.get('api_key'))
-        ws_url: str = str(self.config.get('chat_ws_url'))
+        api_key = str(self.config['api_key'])
+        ws_url: str = str(self.config['chat_ws_url'])
         headers = {"X-API-KEY": api_key}
         self.ws = websocket.WebSocketApp(
             ws_url,
@@ -40,13 +41,14 @@ class ChatSyncClient:
     def on_message(self, ws, message):
         try:
             msg = json.loads(message)
-            name = msg.get('name')
-            content = msg.get('message')
-            timestamp = msg.get('timestamp')
-            msg = Message(name, content, timestamp)
+            msg = Message(
+                msg['name'],
+                msg['message'],
+                msg['timestamp']
+                )
 
             if (msg not in self.sent_messages):
-                self.server.broadcast(f'<{name}> {content}')
+                self.server.broadcast(f'<{msg.name}> {msg.message}')
             self.sent_messages.clear()
         except Exception as e:
             self.server.logger.error(f"Error processing received message: {e}")

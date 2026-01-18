@@ -1,17 +1,18 @@
-import threading
 import time
-from mcdreforged.api.all import *
+from mcdreforged.api.command import Literal
+from mcdreforged.api.types import CommandSource, Info, PluginServerInterface
+from mcdreforged.api.rtext import RText, RColor, RTextList
 from .chat_sync import Message, ChatSyncClient
-from . import whitelist_sync
+from .whitelist_sync import WhitelistSyncClient
 
 # Global state
 config = {}
-chat_client = None
-stop_event = threading.Event()
+chat_client: ChatSyncClient | None = None
+whitelist_client: WhitelistSyncClient | None = None
 
 # Default Configuration
 DEFAULT_CONFIG = {
-    "api_url": "http://localhost:8080/api/v1/minecraft/whitelist",
+    "whitelist_api_url": "http://localhost:8080/api/v1/minecraft/whitelist",
     "chat_ws_url": "ws://localhost:8080/ws/minecraft/chat",
     "api_key": "shigure-cafe-secret-key",
     "interval": 300
@@ -19,7 +20,7 @@ DEFAULT_CONFIG = {
 
 def load_config(server: PluginServerInterface):
     global config
-    config = server.load_config_simple(default_config=DEFAULT_CONFIG, in_data_folder=True)
+    config: dict = server.load_config_simple(default_config=DEFAULT_CONFIG, in_data_folder=True) # type: ignore
     server.logger.info(f'Config loaded: {config}')
 
 def on_load(server: PluginServerInterface, old):
@@ -27,21 +28,19 @@ def on_load(server: PluginServerInterface, old):
     load_config(server)
     register_commands(server)
     
-    stop_event.clear()
-    whitelist_sync.whitelist_loop(server, config, stop_event)
+    whitelist_client = WhitelistSyncClient(server, config)
     chat_client = ChatSyncClient(server, config)
+    whitelist_client.run() # type: ignore
     chat_client.run() # type: ignore
 
 def on_unload(server: PluginServerInterface):
-    global chat_client, stop_event
     server.logger.info('Unloading ShigureCafePlugin...')
-    
-    # Stop whitelist sync loop
-    stop_event.set()
     
     # Stop chat sync websocket client
     if chat_client:
         chat_client.stop()
+    if whitelist_client:
+        whitelist_client.stop()
 
 def register_commands(server: PluginServerInterface):
     server.register_command(
@@ -53,13 +52,16 @@ def register_commands(server: PluginServerInterface):
     )
 
 def manual_whitelist_sync(src: CommandSource):
-    server = src.get_server()
-    src.reply('§b[ShigureCafe]§r 正在手动触发白名单同步...')
+    prefix = RText('[ShigureCafe]', color=RColor.aqua)
+    if (whitelist_client is None):
+        src.reply(RTextList(prefix, RText(' 白名单同步客户端未初始化！', color=RColor.red)))
+        return
+    src.reply(RTextList(prefix, ' 正在手动触发白名单同步...'))
     try:
-        whitelist_sync.sync_whitelist(server, config)
-        src.reply('§b[ShigureCafe]§r 白名单同步完成！')
+        whitelist_client.sync_whitelist()
+        src.reply(RTextList(prefix, ' 白名单同步完成！'))
     except Exception as e:
-        src.reply(f'§b[ShigureCafe]§c 白名单同步失败: {e}')
+        src.reply(RTextList(prefix, RText(f' 白名单同步失败: {e}', color=RColor.red)))
 
 def on_user_info(server: PluginServerInterface, info: Info):
     if (chat_client is None):

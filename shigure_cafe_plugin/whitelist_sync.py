@@ -1,59 +1,87 @@
+import dataclasses
 import json
-import os
-import time
+import pathlib
 import requests
-import threading
-from mcdreforged.api.all import *
+import time
+from mcdreforged.api.decorator import new_thread
+from mcdreforged.api.types import PluginServerInterface
 
-def sync_whitelist(server: PluginServerInterface, config: dict):
-    url = config.get('api_url')
-    # Get the server's working directory from MCDR config
-    mcdr_config = server.get_mcdr_config()
-    server_dir = mcdr_config.get('working_directory', 'server')
-    whitelist_path = os.path.join(server_dir, 'whitelist.json')
-    
-    try:
-        headers = {
-            "X-API-KEY": config.get('api_key')
-        }
-        resp = requests.get(url, headers=headers, timeout=10)
+@dataclasses.dataclass(frozen=True, slots=True)
+class PlayerInfo:
+    uuid: str
+    name: str
+
+Whitelist = set[PlayerInfo]
+
+class WhitelistSyncClient:
+    def __init__(self, server: PluginServerInterface, config: dict):
+        self.server = server
+        self.whitelist_url: str = str(config['whitelist_api_url'])
+        self.whitelist_path = pathlib.Path(
+            server.get_mcdr_config().get('working_directory', 'server')
+            ) / 'whitelist.json'
+        self.api_key: str = str(config['api_key'])
+        self.sync_interval: int = int(config['interval'])
+        self.running = False
+
+    def sync_whitelist(self):
+        try:
+            headers = {"X-API-KEY": self.api_key}
+            resp = requests.get(self.whitelist_url, headers=headers)
+
+            if resp.status_code != 200:
+                self.server.logger.warning(f'Failed to fetch whitelist: {resp.status_code}\n{resp.text}')
+                return
+        except Exception as e:
+            self.server.logger.error(f'Error fetching whitelist: {e}')
+            return
         
-        if resp.status_code != 200:
-            server.logger.warning(f'Failed to fetch whitelist. Status: {resp.status_code}, Body: {resp.text}')
+        try:
+            remote_whitelist_json = resp.json()
+            remote_whitelist_raw = remote_whitelist_json['whitelist']
+            remote_whitelist: Whitelist = set(
+                PlayerInfo(
+                    entry['uuid'],
+                    entry['name']
+                    ) for entry in remote_whitelist_raw
+                )
+        except Exception as e:
+            self.server.logger.error(f'Error parsing remote whitelist: {e}')
+            return
+        
+        try:
+            local_whitelist: Whitelist = set()
+            with open(self.whitelist_path, 'r', encoding='utf-8') as f:
+                local_whitelist_json = json.load(f)
+                local_whitelist = set(
+                    PlayerInfo(
+                        entry['uuid'],
+                        entry['name']
+                            ) for entry in local_whitelist_json
+                        )
+        except Exception as e:
+            self.server.logger.error(f'Failed to read local whitelist: {e}')
             return
 
-        remote_whitelist = resp.json()
-        
-        local_whitelist = []
-        if os.path.exists(whitelist_path):
+        if (remote_whitelist != local_whitelist):
+            self.server.logger.info(f'Whitelist change detected. Updating...')
             try:
-                with open(whitelist_path, 'r', encoding='utf-8') as f:
-                    local_whitelist = json.load(f)
+                with open(self.whitelist_path, 'w', encoding='utf-8') as f:
+                    f.write(remote_whitelist_json)
             except Exception as e:
-                server.logger.warning(f'Failed to read local whitelist: {e}')
-        
-        remote_set = {(entry.get('uuid'), entry.get('name')) for entry in remote_whitelist}
-        local_set = {(entry.get('uuid'), entry.get('name')) for entry in local_whitelist}
-        
-        if remote_set != local_set:
-            server.logger.info(f'Whitelist change detected. Updating...')
-            with open(whitelist_path, 'w', encoding='utf-8') as f:
-                json.dump(remote_whitelist, f, indent=4)
+                self.server.logger.error(f'Failed to write local whitelist: {e}')
+                return
             
-            if server.is_server_startup():
-                server.execute('whitelist reload')
-                server.logger.info('Executed "whitelist reload"')
-                
-    except Exception as e:
-        server.logger.error(f'Error syncing whitelist: {e}')
+            if self.server.is_server_running():
+                self.server.execute('whitelist reload')
+                self.server.logger.info('Executed "whitelist reload"')
 
-@new_thread('ShigureCafeWhitelistSync')
-def whitelist_loop(server: PluginServerInterface, config: dict, stop_event: threading.Event):
-    while not stop_event.is_set():
-        try:
-            sync_whitelist(server, config)
-        except Exception as e:
-             server.logger.error(f"Error in whitelist loop: {e}")
-        
-        # Wait for interval or until stop_event is set
-        stop_event.wait(config.get('interval', 300))
+    @new_thread('ShigureCafeWhitelistSync')
+    def run(self) -> None:
+        self.running = True
+        while self.running:
+            self.sync_whitelist()
+            time.sleep(self.sync_interval)
+
+    def stop(self) -> None:
+        self.running = False
