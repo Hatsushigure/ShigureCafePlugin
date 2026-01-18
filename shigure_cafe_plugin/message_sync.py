@@ -19,7 +19,6 @@ class ChatSyncClient:
         self.ws = None
         self.running = True
         self.reconnect_delay = 1
-        self.send_thread = None
 
     def on_message(self, ws, message):
         try:
@@ -49,11 +48,10 @@ class ChatSyncClient:
         self.server.logger.info("WebSocket connection established")
         self.reconnect_delay = 1
         
-        # Start a thread to send messages from queue if not already running
-        if self.send_thread is None or not self.send_thread.is_alive():
-            self.send_thread = threading.Thread(target=self.send_loop, daemon=True)
-            self.send_thread.start()
+        # Start a thread to send messages from queue
+        self.send_loop()
 
+    @new_thread('ShigureCafeChatSendLoop')
     def send_loop(self):
         self.server.logger.info("WebSocket send loop started")
         while self.running and self.ws:
@@ -79,6 +77,7 @@ class ChatSyncClient:
                 self.server.logger.error(f"Error in WebSocket send loop: {e}")
                 time.sleep(1)
 
+    @new_thread('ShigureCafeChatSync')
     def run(self):
         if websocket is None:
             self.server.logger.error("websocket-client is not installed. Please run 'pip install websocket-client'")
@@ -119,33 +118,17 @@ class ChatSyncClient:
 
 def chat_sync_loop(server: PluginServerInterface, config: dict):
     client = ChatSyncClient(server, config)
-    # Use MCDR's new_thread decorator style via manual thread creation to keep client reference if needed
-    thread = threading.Thread(target=client.run, name='ShigureCafeChatSync', daemon=True)
-    thread.start()
+    client.run()
     return client
 
-def on_info(server: PluginServerInterface, info: Info):
-    if not server.is_server_startup():
-        return
-
-    if info.is_user:
-        name = info.player
-    elif info.is_from_server:
-        # Ignore messages sent by the plugin itself (tellraw)
-        if "tellraw" in info.content:
-            return
-        # Basic server info patterns can be filtered here if needed
-        name = "Server"
-    else:
-        return
-
-    if not info.content:
+def on_player_chat(server: PluginServerInterface, player: str, message: str):
+    if not message:
         return
 
     with queue_lock:
         ts = int(time.time() * 1000)
         message_queue.append({
-            "name": name,
-            "message": info.content,
+            "name": player,
+            "message": message,
             "timestamp": ts
         })

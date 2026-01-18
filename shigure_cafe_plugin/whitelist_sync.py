@@ -6,10 +6,11 @@ import threading
 from mcdreforged.api.all import *
 
 def sync_whitelist(server: PluginServerInterface, config: dict):
-# ... (same as before)
-
     url = config.get('api_url')
-    whitelist_path = config.get('whitelist_file')
+    # Get the server's working directory from MCDR config
+    mcdr_config = server.get_mcdr_config()
+    server_dir = mcdr_config.get('working_directory', 'server')
+    whitelist_path = os.path.join(server_dir, 'whitelist.json')
     
     try:
         headers = {
