@@ -26,7 +26,7 @@ class WhitelistSyncClient:
 
     def sync_whitelist(self):
         try:
-            headers = {"X-API-KEY": self.api_key}
+            headers = {"Cafe-API-Key": self.api_key}
             resp = requests.get(self.whitelist_url, headers=headers)
 
             if resp.status_code != 200:

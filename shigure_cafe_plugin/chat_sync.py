@@ -24,10 +24,13 @@ class ChatSyncClient:
         self.reconnect_delay = 1
         api_key = str(self.config['api_key'])
         ws_url: str = str(self.config['chat_ws_url'])
-        headers = {"X-API-KEY": api_key}
+        if '?' in ws_url:
+            ws_url += f"&cafe_api_key={api_key}"
+        else:
+            ws_url += f"?cafe_api_key={api_key}"
+        
         self.ws = websocket.WebSocketApp(
             ws_url,
-            header=headers,
             on_open=self.on_open,
             on_message=self.on_message,
             on_error=self.on_error,

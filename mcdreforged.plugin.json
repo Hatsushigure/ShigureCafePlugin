@@ -1,6 +1,6 @@
 {
     "id": "shigure_cafe_plugin",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "name": "ShigureCafePlugin",
     "description": "Sync whitelist and chat messages with ShigureCafeBackend",
     "author": "ShigureCafe",
