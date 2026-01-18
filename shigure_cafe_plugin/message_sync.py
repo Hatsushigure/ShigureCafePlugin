@@ -34,6 +34,7 @@ class ChatSyncClient:
                 {"text": f"<{name}> ", "color": "white"},
                 {"text": content, "color": "white"}
             ]
+            self.server.logger.info(f"<{name}> {content}")
             self.server.execute(f'tellraw @a {json.dumps(tellraw_obj)}')
         except Exception as e:
             self.server.logger.error(f"Error processing received message: {e}")
