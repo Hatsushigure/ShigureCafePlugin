@@ -34,7 +34,7 @@ jobs:
     - name: Create MCDR Package
       run: |
         # Create a zip file with .mcdr extension containing the necessary files
-        zip -r ShigureCafePlugin-${{ env.VERSION }}.mcdr \
+        zip -r ShigureCafePlugin-v${{ env.VERSION }}.mcdr \
           mcdreforged.plugin.json \
           shigure_cafe_plugin/ \
           requirements.txt
@@ -42,15 +42,12 @@ jobs:
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: ShigureCafePlugin-${{ env.VERSION }}.mcdr
-        path: |
-          mcdreforged.plugin.json
-          shigure_cafe_plugin/
-          requirements.txt
+        name: ShigureCafePlugin-v${{ env.VERSION }}.mcdr
+        path: ShigureCafePlugin-v${{ env.VERSION }}.mcdr
 
     - name: Create Release
       if: startsWith(github.ref, 'refs/tags/')
       uses: softprops/action-gh-release@v1
       with:
-        files: ShigureCafePlugin-${{ env.VERSION }}.mcdr
+        files: ShigureCafePlugin-v${{ env.VERSION }}.mcdr
         generate_release_notes: true
