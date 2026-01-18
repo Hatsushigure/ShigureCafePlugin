@@ -1,6 +1,8 @@
 import threading
+import time
 from mcdreforged.api.all import *
-from . import whitelist_sync, message_sync
+from .chat_sync import Message, ChatSyncClient
+from . import whitelist_sync
 
 # Global state
 config = {}
@@ -27,7 +29,8 @@ def on_load(server: PluginServerInterface, old):
     
     stop_event.clear()
     whitelist_sync.whitelist_loop(server, config, stop_event)
-    chat_client = message_sync.chat_sync_loop(server, config)
+    chat_client = ChatSyncClient(server, config)
+    chat_client.run() # type: ignore
 
 def on_unload(server: PluginServerInterface):
     global chat_client, stop_event
@@ -39,7 +42,6 @@ def on_unload(server: PluginServerInterface):
     # Stop chat sync websocket client
     if chat_client:
         chat_client.stop()
-        chat_client = None
 
 def register_commands(server: PluginServerInterface):
     server.register_command(
@@ -59,5 +61,15 @@ def manual_whitelist_sync(src: CommandSource):
     except Exception as e:
         src.reply(f'§b[ShigureCafe]§c 白名单同步失败: {e}')
 
-def on_player_chat(server: PluginServerInterface, player: str, message: str):
-    message_sync.on_player_chat(server, player, message)
+def on_user_info(server: PluginServerInterface, info: Info):
+    if (chat_client is None):
+        return
+    if (info.player is None) or (info.content is None):
+        return
+    chat_client.add_message(
+        Message(
+            info.player,
+            info.content,
+            int(round(time.time() * 1000))
+            )
+        )
