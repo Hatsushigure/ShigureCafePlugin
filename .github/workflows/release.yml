@@ -44,8 +44,13 @@ jobs:
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: ShigureCafePlugin-${{ env.VERSION }}
-        path: ShigureCafePlugin-${{ env.VERSION }}.mcdr
+        name: ShigureCafePlugin-${{ env.VERSION }}.mcdr
+        path: |
+          mcdreforged.plugin.json
+          __init__.py
+          message_sync.py
+          whitelist_sync.py
+          requirements.txt
 
     - name: Create Release
       if: startsWith(github.ref, 'refs/tags/')
